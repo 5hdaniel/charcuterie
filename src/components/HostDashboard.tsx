@@ -3,7 +3,7 @@ import { PartyState } from '../types';
 import { BOARD_DATA } from '../constants';
 import { updatePartyStatus, updatePartyAllowedItems } from '../services/partyService';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { Share2, Users, Lock, Check, Edit, ArrowRight, Settings, Square, CheckSquare } from 'lucide-react';
+import { Share2, Users, Lock, Check, Edit, ArrowRight, Settings, Square, CheckSquare, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
 
 interface HostDashboardProps {
   party: PartyState;
@@ -17,8 +17,12 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ party }) => {
     return party.allowedItemIds || BOARD_DATA.flatMap(c => c.items.map(i => i.id));
   }, [party.allowedItemIds]);
 
-  const [tempAllowedIds, setTempAllowedIds] = useState<string[]>(activeAllowedIds);
+  // For new parties (status === 'setup'), start with no items selected. For existing parties, use activeAllowedIds
+  const [tempAllowedIds, setTempAllowedIds] = useState<string[]>(
+    party.status === 'setup' ? [] : activeAllowedIds
+  );
   const [isEditingMenu, setIsEditingMenu] = useState(party.status === 'setup');
+  const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
 
   // Sync local state with party state if it updates from another source
   useEffect(() => {
@@ -143,6 +147,37 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ party }) => {
     setIsEditingMenu(false);
   };
 
+  const toggleCategoryCollapse = (categoryId: string) => {
+    setCollapsedCategories(prev => {
+      const newSet = new Set(prev);
+      if (newSet.has(categoryId)) {
+        newSet.delete(categoryId);
+      } else {
+        newSet.add(categoryId);
+      }
+      return newSet;
+    });
+  };
+
+  const handleSurpriseMe = () => {
+    const randomSelections: string[] = [];
+    BOARD_DATA.forEach(cat => {
+      const availableItems = [...cat.items];
+      const numToSelect = Math.min(
+        Math.floor(Math.random() * (cat.selectionLimit + 1)),
+        availableItems.length
+      );
+
+      // Shuffle and select random items
+      for (let i = 0; i < numToSelect; i++) {
+        const randomIndex = Math.floor(Math.random() * availableItems.length);
+        randomSelections.push(availableItems[randomIndex].id);
+        availableItems.splice(randomIndex, 1);
+      }
+    });
+    setTempAllowedIds(randomSelections);
+  };
+
   // --- RENDER: SETUP VIEW ---
   if (isEditingMenu) {
     return (
@@ -156,12 +191,18 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ party }) => {
               </p>
             </div>
             <div className="flex gap-3">
+              <button
+                onClick={handleSurpriseMe}
+                className="px-4 py-3 bg-[#6B7C3F] hover:bg-[#5a6735] text-white rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-[#6B7C3F]/20 transition-all"
+              >
+                <Sparkles size={18} /> Surprise Me
+              </button>
               {party.status !== 'setup' && (
                  <button onClick={cancelEdit} className="px-4 py-2 text-stone-500 hover:text-stone-800 font-bold">
                    Cancel
                  </button>
               )}
-              <button 
+              <button
                 onClick={saveMenu}
                 className="px-6 py-3 bg-accent hover:bg-accent-hover text-white rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-accent/20 transition-all"
               >
@@ -180,44 +221,78 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ party }) => {
               const selectedCount = cat.items.filter(i => tempAllowedIds.includes(i.id)).length;
               const isAllSelected = selectedCount === cat.items.length;
               const isNoneSelected = selectedCount === 0;
+              const isCollapsed = collapsedCategories.has(cat.id);
 
               return (
                 <div key={cat.id} className="bg-stone-50/50 rounded-xl p-4 border border-stone-200">
                   <div className="flex items-center justify-between mb-4">
-                    <h3 className="font-serif text-xl font-bold text-stone-800">{cat.title}</h3>
-                    <button 
-                      onClick={() => toggleCategoryAll(cat.id, isAllSelected)}
-                      className="text-xs font-bold text-stone-500 hover:text-accent uppercase tracking-wider"
-                    >
-                      {isAllSelected ? 'Deselect All' : 'Select All'}
-                    </button>
+                    <div className="flex items-center gap-3">
+                      <button
+                        onClick={() => toggleCategoryCollapse(cat.id)}
+                        className="text-stone-600 hover:text-stone-800 transition-colors"
+                      >
+                        {isCollapsed ? <ChevronDown size={20} /> : <ChevronUp size={20} />}
+                      </button>
+                      <h3 className="font-serif text-xl font-bold text-stone-800">
+                        {cat.title} {selectedCount > 0 && <span className="text-sm text-accent">({selectedCount} selected)</span>}
+                      </h3>
+                    </div>
+                    {!isCollapsed && (
+                      <button
+                        onClick={() => toggleCategoryAll(cat.id, isAllSelected)}
+                        className="text-xs font-bold text-stone-500 hover:text-accent uppercase tracking-wider"
+                      >
+                        {isAllSelected ? 'Deselect All' : 'Select All'}
+                      </button>
+                    )}
                   </div>
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                    {cat.items.map(item => {
-                      const isSelected = tempAllowedIds.includes(item.id);
-                      return (
-                        <div 
-                          key={item.id}
-                          onClick={() => toggleAllowedItem(item.id)}
-                          className={`
-                            flex items-start gap-3 p-3 rounded-lg cursor-pointer border transition-all
-                            ${isSelected ? 'bg-white border-accent/30 shadow-sm' : 'bg-stone-100 border-transparent opacity-60'}
-                          `}
-                        >
-                          <div className={`mt-0.5 ${isSelected ? 'text-accent' : 'text-stone-400'}`}>
-                            {isSelected ? <CheckSquare size={20} /> : <Square size={20} />}
+                  {!isCollapsed && (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                      {cat.items.map(item => {
+                        const isSelected = tempAllowedIds.includes(item.id);
+                        return (
+                          <div
+                            key={item.id}
+                            onClick={() => toggleAllowedItem(item.id)}
+                            className={`
+                              flex items-start gap-3 p-3 rounded-lg cursor-pointer border transition-all
+                              ${isSelected ? 'bg-white border-accent/30 shadow-sm' : 'bg-stone-100 border-transparent opacity-60'}
+                            `}
+                          >
+                            <div className={`mt-0.5 ${isSelected ? 'text-accent' : 'text-stone-400'}`}>
+                              {isSelected ? <CheckSquare size={20} /> : <Square size={20} />}
+                            </div>
+                            <div>
+                              <div className={`font-bold leading-tight ${isSelected ? 'text-stone-800' : 'text-stone-500'}`}>{item.name}</div>
+                              <div className="text-xs text-stone-400 mt-1 line-clamp-1">{item.description}</div>
+                            </div>
                           </div>
-                          <div>
-                            <div className={`font-bold leading-tight ${isSelected ? 'text-stone-800' : 'text-stone-500'}`}>{item.name}</div>
-                            <div className="text-xs text-stone-400 mt-1 line-clamp-1">{item.description}</div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               );
             })}
+          </div>
+
+          {/* Duplicate buttons at bottom */}
+          <div className="flex flex-col md:flex-row justify-center items-center gap-3 mt-8 pt-8 border-t border-stone-200">
+            {party.status !== 'setup' && (
+              <button onClick={cancelEdit} className="px-4 py-2 text-stone-500 hover:text-stone-800 font-bold">
+                Cancel
+              </button>
+            )}
+            <button
+              onClick={saveMenu}
+              className="px-6 py-3 bg-accent hover:bg-accent-hover text-white rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-accent/20 transition-all"
+            >
+              {party.status === 'setup' ? (
+                <>Start Party & Invite Guests <ArrowRight size={18} /></>
+              ) : (
+                <>Save Changes</>
+              )}
+            </button>
           </div>
         </div>
       </div>
