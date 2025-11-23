@@ -20,6 +20,12 @@ const supabaseKey = getEnv('SUPABASE_ANON_KEY', 'VITE_SUPABASE_ANON_KEY');
 
 if (!supabaseUrl || !supabaseKey) {
   console.warn("Supabase credentials missing. Please check your .env file or Vercel Environment Variables.");
+  console.warn("The app will run with limited functionality. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to enable full features.");
 }
 
-export const supabase = createClient(supabaseUrl || '', supabaseKey || '');
+// Use placeholder values if credentials are missing to prevent initialization errors
+// The app will still function but won't have database persistence
+export const supabase = createClient(
+  supabaseUrl || 'https://placeholder.supabase.co',
+  supabaseKey || 'placeholder-anon-key'
+);
