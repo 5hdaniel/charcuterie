@@ -19,7 +19,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ party }) => {
 
   // For new parties (status === 'setup'), start with no items selected. For existing parties, use activeAllowedIds
   const [tempAllowedIds, setTempAllowedIds] = useState<string[]>(
-    party.status === 'setup' && !party.allowedItemIds ? [] : activeAllowedIds
+    party.status === 'setup' ? [] : activeAllowedIds
   );
   const [isEditingMenu, setIsEditingMenu] = useState(party.status === 'setup');
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
