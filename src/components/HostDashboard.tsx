@@ -193,7 +193,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ party }) => {
             <div className="flex gap-3">
               <button
                 onClick={handleSurpriseMe}
-                className="px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-purple-600/20 transition-all"
+                className="px-4 py-3 bg-[#6B7C3F] hover:bg-[#5a6735] text-white rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-[#6B7C3F]/20 transition-all"
               >
                 <Sparkles size={18} /> Surprise Me
               </button>
@@ -278,12 +278,6 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ party }) => {
 
           {/* Duplicate buttons at bottom */}
           <div className="flex flex-col md:flex-row justify-center items-center gap-3 mt-8 pt-8 border-t border-stone-200">
-            <button
-              onClick={handleSurpriseMe}
-              className="px-4 py-3 bg-purple-600 hover:bg-purple-700 text-white rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-purple-600/20 transition-all"
-            >
-              <Sparkles size={18} /> Surprise Me
-            </button>
             {party.status !== 'setup' && (
               <button onClick={cancelEdit} className="px-4 py-2 text-stone-500 hover:text-stone-800 font-bold">
                 Cancel
