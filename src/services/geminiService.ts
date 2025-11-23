@@ -64,7 +64,7 @@ export const generateItemSketch = async (itemName: string, description: string):
     let imageUrl: string | null = null;
 
     // Iterate to find the image part
-    if (response.candidates && response.candidates[0].content.parts) {
+    if (response.candidates && response.candidates[0] && response.candidates[0].content && response.candidates[0].content.parts) {
       for (const part of response.candidates[0].content.parts) {
         if (part.inlineData) {
           const base64EncodeString = part.inlineData.data;
