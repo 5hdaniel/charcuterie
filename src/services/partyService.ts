@@ -36,6 +36,7 @@ const mapDbToParty = (partyRow: any, guestRows: any[]): PartyState => {
     status: partyRow.status,
     finalSelections: partyRow.final_selections || [],
     allowedItemIds: partyRow.allowed_item_ids || [],
+    customItems: partyRow.custom_items || {},
     guests: guestRows.map(g => ({
       id: g.id,
       name: g.name,
@@ -52,12 +53,13 @@ export const createParty = async (hostName: string): Promise<PartyState> => {
   const { data, error } = await supabase
     .from('parties')
     .insert([
-      { 
-        id: newId, 
+      {
+        id: newId,
         host_name: hostName,
         status: 'setup',
         final_selections: [],
-        allowed_item_ids: allItemIds
+        allowed_item_ids: allItemIds,
+        custom_items: {}
       }
     ])
     .select()
@@ -123,6 +125,10 @@ export const updatePartyStatus = async (partyId: string, status: 'setup' | 'acti
 
 export const updatePartyAllowedItems = async (partyId: string, allowedItemIds: string[]) => {
   await supabase.from('parties').update({ allowed_item_ids: allowedItemIds }).eq('id', partyId);
+};
+
+export const updatePartyCustomItems = async (partyId: string, customItems: Record<string, any[]>) => {
+  await supabase.from('parties').update({ custom_items: customItems }).eq('id', partyId);
 };
 
 // Fetch and Subscribe (Realtime)

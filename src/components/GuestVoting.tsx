@@ -35,13 +35,22 @@ export const GuestVoting: React.FC<GuestVotingProps> = ({ party, guest }) => {
     return party.allowedItemIds || BOARD_DATA.flatMap(c => c.items.map(i => i.id));
   }, [party.allowedItemIds]);
 
+  // Merge default items with custom items
+  const mergedBoardData = useMemo(() => {
+    const customItems = party.customItems || {};
+    return BOARD_DATA.map(cat => ({
+      ...cat,
+      items: [...cat.items, ...(customItems[cat.id] || [])]
+    }));
+  }, [party.customItems]);
+
   // Filter Data based on Allowed Items
   const filteredBoardData = useMemo(() => {
-    return BOARD_DATA.map(cat => ({
+    return mergedBoardData.map(cat => ({
       ...cat,
       items: cat.items.filter(item => allowedItemIds.includes(item.id))
     })).filter(cat => cat.items.length > 0);
-  }, [allowedItemIds]);
+  }, [allowedItemIds, mergedBoardData]);
 
   // --- SETUP STATE VIEW ---
   if (party.status === 'setup') {

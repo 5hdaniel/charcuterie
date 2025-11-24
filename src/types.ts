@@ -31,6 +31,7 @@ export interface PartyState {
   status: 'setup' | 'active' | 'finalized';
   finalSelections: string[]; // IDs of items selected by host for the final board
   allowedItemIds: string[]; // IDs of items allowed for voting
+  customItems?: Record<string, Item[]>; // categoryId -> custom items added by host
 }
 
 // Event keys for local storage synchronization
