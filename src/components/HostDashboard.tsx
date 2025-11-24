@@ -236,6 +236,9 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ party }) => {
           showSkipButton
           showProgress
           callback={handleJoyrideCallback}
+          scrollOffset={120}
+          disableScrollParentFix={true}
+          spotlightPadding={8}
           styles={{
             options: {
               primaryColor: '#b45309',
