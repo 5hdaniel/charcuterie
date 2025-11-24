@@ -11,32 +11,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
   <div className="min-h-screen bg-board-light text-stone-800 font-sans selection:bg-accent selection:text-white">
     <header className="bg-white border-b border-stone-200 py-4 shadow-sm sticky top-0 z-50">
       <div className="container mx-auto px-4 flex justify-between items-center">
-        <div className="flex items-center gap-3 text-stone-800">
-           {/* Custom Pencil Sketch Logo: Chisel (Left-Right) and Prolonged (Right-Left) */}
-           <svg viewBox="0 0 60 60" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-12 h-12 text-accent">
-              {/* Chisel Knife (Diagonal Right /) - Short, wide blade */}
-              <g transform="translate(15, 15)">
-                 {/* Handle */}
-                 <path d="M5 25 L15 15" strokeWidth="3" className="text-stone-600" />
-                 <path d="M4 24 L6 26" strokeWidth="1" className="opacity-50"/>
-                 {/* Blade */}
-                 <path d="M15 15 L22 8 L28 14 L21 21" fill="currentColor" fillOpacity="0.1" />
-                 <path d="M15 15 L21 21" strokeWidth="1.5"/> {/* Spine */}
-                 <path d="M22 8 L28 14" strokeWidth="1.5"/> {/* Edge */}
-                 <path d="M18 12 L24 18" strokeWidth="1" className="opacity-30"/> {/* Texture */}
-              </g>
-
-              {/* Prolonged Knife (Diagonal Left \) - Long, thin blade */}
-              <g transform="translate(25, 15)">
-                 {/* Handle */}
-                 <path d="M25 25 L20 20" strokeWidth="3" className="text-stone-600" />
-                 {/* Blade */}
-                 <path d="M20 20 L5 5" strokeWidth="1.5" fill="none" />
-                 <path d="M21 19 L6 4" strokeWidth="1" className="opacity-60" />
-                 <path d="M5 5 L6 4" strokeWidth="1" /> {/* Tip */}
-                 <path d="M15 15 L10 10" strokeWidth="1" className="opacity-30"/> {/* Texture */}
-              </g>
-           </svg>
+        <div className="flex items-center text-stone-800">
            <span className="font-serif text-2xl font-bold tracking-tight">Charcuterie<span className="text-accent">Voter</span></span>
         </div>
       </div>
