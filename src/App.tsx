@@ -17,7 +17,7 @@ const Layout: React.FC<{ children: React.ReactNode }> = ({ children }) => (
       </div>
     </header>
     
-    <main className="container mx-auto px-4 py-8">
+    <main className="container mx-auto px-4 py-4 md:py-8">
       {children}
     </main>
     <footer className="bg-stone-100 border-t border-stone-200 py-8 mt-12">
@@ -52,13 +52,13 @@ const Landing = () => {
   };
 
   return (
-    <div className="flex flex-col items-center justify-center py-20">
-      <div className="text-center max-w-2xl mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
-        <h1 className="font-serif text-5xl md:text-6xl font-bold text-stone-900 mb-6 leading-tight">
+    <div className="flex flex-col items-center justify-center py-4 md:py-20">
+      <div className="text-center max-w-2xl mb-6 md:mb-12 animate-in fade-in slide-in-from-bottom-4 duration-700">
+        <h1 className="font-serif text-4xl md:text-6xl font-bold text-stone-900 mb-4 md:mb-6 leading-tight">
           The Art of the <br/>
           <span className="text-accent italic">Perfect Board</span>
         </h1>
-        <p className="text-xl text-stone-600 leading-relaxed">
+        <p className="text-lg md:text-xl text-stone-600 leading-relaxed">
           Stop guessing what your guests eat. Create a party, invite your friends, 
           and let them vote on their favorite meats, cheeses, and pairings.
         </p>
