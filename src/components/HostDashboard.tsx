@@ -4,6 +4,7 @@ import { BOARD_DATA } from '../constants';
 import { updatePartyStatus, updatePartyAllowedItems } from '../services/partyService';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
 import { Share2, Users, Lock, Check, Edit, ArrowRight, Settings, Square, CheckSquare, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import Joyride, { CallBackProps, STATUS, Step } from 'react-joyride';
 
 interface HostDashboardProps {
   party: PartyState;
@@ -11,7 +12,7 @@ interface HostDashboardProps {
 
 export const HostDashboard: React.FC<HostDashboardProps> = ({ party }) => {
   const [finalPicks, setFinalPicks] = useState<string[]>(party.finalSelections || []);
-  
+
   // Safe fallback for existing parties created before allowedItemIds existed
   const activeAllowedIds = useMemo(() => {
     return party.allowedItemIds || BOARD_DATA.flatMap(c => c.items.map(i => i.id));
@@ -23,6 +24,52 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ party }) => {
   );
   const [isEditingMenu, setIsEditingMenu] = useState(party.status === 'setup');
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+
+  // Joyride tour state
+  const [runTour, setRunTour] = useState(false);
+  const tourSteps: Step[] = [
+    {
+      target: '.menu-setup-header',
+      content: 'Welcome! This is where you customize what items guests can vote on for your charcuterie board.',
+      disableBeacon: true,
+    },
+    {
+      target: '.category-section:first-child',
+      content: 'Each category shows different items. Click on items to toggle them on/off. Only selected items will appear on the voting form.',
+    },
+    {
+      target: '.select-all-btn',
+      content: 'Use "Select All" or "Deselect All" to quickly manage all items in a category.',
+    },
+    {
+      target: '.surprise-me-btn',
+      content: 'Feeling adventurous? Click "Surprise Me" to randomly select items across all categories!',
+    },
+    {
+      target: '.start-party-btn',
+      content: 'Once you\'re happy with your selections, click here to start the party and invite your guests!',
+    },
+  ];
+
+  // Check if user has seen the tour
+  useEffect(() => {
+    const hasSeenTour = localStorage.getItem('charcuterie-host-tour-seen');
+    if (!hasSeenTour && isEditingMenu && party.status === 'setup') {
+      // Delay tour start to ensure DOM is ready
+      const timer = setTimeout(() => setRunTour(true), 500);
+      return () => clearTimeout(timer);
+    }
+  }, [isEditingMenu, party.status]);
+
+  const handleJoyrideCallback = (data: CallBackProps) => {
+    const { status } = data;
+    const finishedStatuses: string[] = [STATUS.FINISHED, STATUS.SKIPPED];
+
+    if (finishedStatuses.includes(status)) {
+      setRunTour(false);
+      localStorage.setItem('charcuterie-host-tour-seen', 'true');
+    }
+  };
 
   // Sync local state with party state if it updates from another source
   useEffect(() => {
@@ -182,8 +229,26 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ party }) => {
   if (isEditingMenu) {
     return (
       <div className="max-w-5xl mx-auto pb-20">
+        <Joyride
+          steps={tourSteps}
+          run={runTour}
+          continuous
+          showSkipButton
+          showProgress
+          callback={handleJoyrideCallback}
+          scrollOffset={120}
+          disableScrollParentFix={true}
+          spotlightPadding={8}
+          styles={{
+            options: {
+              primaryColor: '#b45309',
+              textColor: '#1c1917',
+              zIndex: 10000,
+            },
+          }}
+        />
         <div className="bg-white p-8 rounded-2xl shadow-lg border border-stone-200 mb-8">
-          <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 border-b border-stone-100 pb-6">
+          <div className="menu-setup-header flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-8 border-b border-stone-100 pb-6">
             <div>
               <h2 className="font-serif text-3xl font-bold text-stone-800">Setup Your Menu</h2>
               <p className="text-stone-500 mt-2">
@@ -193,7 +258,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ party }) => {
             <div className="flex gap-3">
               <button
                 onClick={handleSurpriseMe}
-                className="px-4 py-3 bg-[#6B7C3F] hover:bg-[#5a6735] text-white rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-[#6B7C3F]/20 transition-all"
+                className="surprise-me-btn px-4 py-3 bg-[#6B7C3F] hover:bg-[#5a6735] text-white rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-[#6B7C3F]/20 transition-all"
               >
                 <Sparkles size={18} /> Surprise Me
               </button>
@@ -204,7 +269,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ party }) => {
               )}
               <button
                 onClick={saveMenu}
-                className="px-6 py-3 bg-accent hover:bg-accent-hover text-white rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-accent/20 transition-all"
+                className="start-party-btn px-6 py-3 bg-accent hover:bg-accent-hover text-white rounded-lg font-bold flex items-center gap-2 shadow-lg shadow-accent/20 transition-all"
               >
                 {party.status === 'setup' ? (
                   <>Start Party & Invite Guests <ArrowRight size={18} /></>
@@ -224,7 +289,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ party }) => {
               const isCollapsed = collapsedCategories.has(cat.id);
 
               return (
-                <div key={cat.id} className="bg-stone-50/50 rounded-xl p-4 border border-stone-200">
+                <div key={cat.id} className="category-section bg-stone-50/50 rounded-xl p-4 border border-stone-200">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center gap-3">
                       <button
@@ -240,7 +305,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ party }) => {
                     {!isCollapsed && (
                       <button
                         onClick={() => toggleCategoryAll(cat.id, isAllSelected)}
-                        className="text-xs font-bold text-stone-500 hover:text-accent uppercase tracking-wider"
+                        className="select-all-btn text-xs font-bold text-stone-500 hover:text-accent uppercase tracking-wider"
                       >
                         {isAllSelected ? 'Deselect All' : 'Select All'}
                       </button>
