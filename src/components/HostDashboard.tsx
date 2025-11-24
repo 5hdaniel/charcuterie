@@ -1,10 +1,11 @@
 import React, { useMemo, useState, useEffect } from 'react';
-import { PartyState } from '../types';
+import { PartyState, Item } from '../types';
 import { BOARD_DATA } from '../constants';
-import { updatePartyStatus, updatePartyAllowedItems } from '../services/partyService';
+import { updatePartyStatus, updatePartyAllowedItems, updatePartyCustomItems } from '../services/partyService';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { Share2, Users, Lock, Check, Edit, ArrowRight, Settings, Square, CheckSquare, ChevronDown, ChevronUp, Sparkles } from 'lucide-react';
+import { Share2, Users, Lock, Check, Edit, ArrowRight, Settings, Square, CheckSquare, ChevronDown, ChevronUp, Sparkles, Plus, X } from 'lucide-react';
 import Joyride, { CallBackProps, STATUS, Step } from 'react-joyride';
+import { v4 as uuidv4 } from 'uuid';
 
 interface HostDashboardProps {
   party: PartyState;
@@ -24,6 +25,19 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ party }) => {
   );
   const [isEditingMenu, setIsEditingMenu] = useState(party.status === 'setup');
   const [collapsedCategories, setCollapsedCategories] = useState<Set<string>>(new Set());
+
+  // Custom items state
+  const [customItems, setCustomItems] = useState<Record<string, Item[]>>(party.customItems || {});
+  const [addingToCategory, setAddingToCategory] = useState<string | null>(null);
+  const [newItemName, setNewItemName] = useState('');
+
+  // Merge default items with custom items
+  const mergedBoardData = useMemo(() => {
+    return BOARD_DATA.map(cat => ({
+      ...cat,
+      items: [...cat.items, ...(customItems[cat.id] || [])]
+    }));
+  }, [customItems]);
 
   // Joyride tour state
   const [runTour, setRunTour] = useState(false);
@@ -84,11 +98,11 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ party }) => {
 
   // Filtered Data based on Host Config
   const filteredBoardData = useMemo(() => {
-    return BOARD_DATA.map(cat => ({
+    return mergedBoardData.map(cat => ({
       ...cat,
       items: cat.items.filter(item => activeAllowedIds.includes(item.id))
     })).filter(cat => cat.items.length > 0);
-  }, [activeAllowedIds]);
+  }, [activeAllowedIds, mergedBoardData]);
 
   // Aggregate Votes
   const results = useMemo(() => {
@@ -168,9 +182,9 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ party }) => {
   };
 
   const toggleCategoryAll = (categoryId: string, allSelected: boolean) => {
-    const categoryItems = BOARD_DATA.find(c => c.id === categoryId)?.items || [];
+    const categoryItems = mergedBoardData.find(c => c.id === categoryId)?.items || [];
     const itemIds = categoryItems.map(i => i.id);
-    
+
     if (allSelected) {
       // Deselect all
       setTempAllowedIds(prev => prev.filter(id => !itemIds.includes(id)));
@@ -208,7 +222,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ party }) => {
 
   const handleSurpriseMe = () => {
     const randomSelections: string[] = [];
-    BOARD_DATA.forEach(cat => {
+    mergedBoardData.forEach(cat => {
       const availableItems = [...cat.items];
       const numToSelect = Math.min(
         Math.floor(Math.random() * (cat.selectionLimit + 1)),
@@ -223,6 +237,42 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ party }) => {
       }
     });
     setTempAllowedIds(randomSelections);
+  };
+
+  const handleAddCustomItem = (categoryId: string) => {
+    if (!newItemName.trim()) return;
+
+    const newItem: Item = {
+      id: `custom-${uuidv4()}`,
+      name: newItemName.trim(),
+      description: 'Custom item'
+    };
+
+    const updatedCustomItems = {
+      ...customItems,
+      [categoryId]: [...(customItems[categoryId] || []), newItem]
+    };
+
+    setCustomItems(updatedCustomItems);
+    setTempAllowedIds(prev => [...prev, newItem.id]);
+    setNewItemName('');
+    setAddingToCategory(null);
+
+    // Save to database
+    updatePartyCustomItems(party.id, updatedCustomItems);
+  };
+
+  const handleDeleteCustomItem = (categoryId: string, itemId: string) => {
+    const updatedCustomItems = {
+      ...customItems,
+      [categoryId]: (customItems[categoryId] || []).filter(item => item.id !== itemId)
+    };
+
+    setCustomItems(updatedCustomItems);
+    setTempAllowedIds(prev => prev.filter(id => id !== itemId));
+
+    // Save to database
+    updatePartyCustomItems(party.id, updatedCustomItems);
   };
 
   // --- RENDER: SETUP VIEW ---
@@ -281,7 +331,7 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ party }) => {
           </div>
 
           <div className="space-y-8">
-            {BOARD_DATA.map(cat => {
+            {mergedBoardData.map(cat => {
               const catItemIds = cat.items.map(i => i.id);
               const selectedCount = cat.items.filter(i => tempAllowedIds.includes(i.id)).length;
               const isAllSelected = selectedCount === cat.items.length;
@@ -303,38 +353,102 @@ export const HostDashboard: React.FC<HostDashboardProps> = ({ party }) => {
                       </h3>
                     </div>
                     {!isCollapsed && (
-                      <button
-                        onClick={() => toggleCategoryAll(cat.id, isAllSelected)}
-                        className="select-all-btn text-xs font-bold text-stone-500 hover:text-accent uppercase tracking-wider"
-                      >
-                        {isAllSelected ? 'Deselect All' : 'Select All'}
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setAddingToCategory(cat.id)}
+                          className="px-3 py-1.5 bg-accent hover:bg-accent-hover text-white rounded-lg font-bold flex items-center gap-1 text-xs transition-all shadow-sm"
+                          title="Add custom item"
+                        >
+                          <Plus size={14} /> Add
+                        </button>
+                        <button
+                          onClick={() => toggleCategoryAll(cat.id, isAllSelected)}
+                          className="select-all-btn text-xs font-bold text-stone-500 hover:text-accent uppercase tracking-wider"
+                        >
+                          {isAllSelected ? 'Deselect All' : 'Select All'}
+                        </button>
+                      </div>
                     )}
                   </div>
                   {!isCollapsed && (
-                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
-                      {cat.items.map(item => {
-                        const isSelected = tempAllowedIds.includes(item.id);
-                        return (
-                          <div
-                            key={item.id}
-                            onClick={() => toggleAllowedItem(item.id)}
-                            className={`
-                              flex items-start gap-3 p-3 rounded-lg cursor-pointer border transition-all
-                              ${isSelected ? 'bg-white border-accent/30 shadow-sm' : 'bg-stone-100 border-transparent opacity-60'}
-                            `}
-                          >
-                            <div className={`mt-0.5 ${isSelected ? 'text-accent' : 'text-stone-400'}`}>
-                              {isSelected ? <CheckSquare size={20} /> : <Square size={20} />}
-                            </div>
-                            <div>
-                              <div className={`font-bold leading-tight ${isSelected ? 'text-stone-800' : 'text-stone-500'}`}>{item.name}</div>
-                              <div className="text-xs text-stone-400 mt-1 line-clamp-1">{item.description}</div>
-                            </div>
+                    <>
+                      {addingToCategory === cat.id && (
+                        <div className="mb-4 p-4 bg-white rounded-lg border border-accent/30 shadow-sm">
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="text"
+                              value={newItemName}
+                              onChange={(e) => setNewItemName(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === 'Enter') handleAddCustomItem(cat.id);
+                                if (e.key === 'Escape') {
+                                  setAddingToCategory(null);
+                                  setNewItemName('');
+                                }
+                              }}
+                              placeholder="Enter item name..."
+                              className="flex-1 px-3 py-2 border border-stone-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-accent focus:border-transparent"
+                              autoFocus
+                            />
+                            <button
+                              onClick={() => handleAddCustomItem(cat.id)}
+                              className="px-4 py-2 bg-accent hover:bg-accent-hover text-white rounded-lg font-bold transition-all"
+                            >
+                              Add
+                            </button>
+                            <button
+                              onClick={() => {
+                                setAddingToCategory(null);
+                                setNewItemName('');
+                              }}
+                              className="px-3 py-2 text-stone-500 hover:text-stone-800 rounded-lg transition-all"
+                            >
+                              <X size={18} />
+                            </button>
                           </div>
-                        );
-                      })}
-                    </div>
+                        </div>
+                      )}
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                        {cat.items.map(item => {
+                          const isSelected = tempAllowedIds.includes(item.id);
+                          const isCustomItem = item.id.startsWith('custom-');
+                          return (
+                            <div
+                              key={item.id}
+                              className={`
+                                flex items-start gap-3 p-3 rounded-lg border transition-all
+                                ${isSelected ? 'bg-white border-accent/30 shadow-sm' : 'bg-stone-100 border-transparent opacity-60'}
+                              `}
+                            >
+                              <div
+                                onClick={() => toggleAllowedItem(item.id)}
+                                className={`flex-1 flex items-start gap-3 cursor-pointer`}
+                              >
+                                <div className={`mt-0.5 ${isSelected ? 'text-accent' : 'text-stone-400'}`}>
+                                  {isSelected ? <CheckSquare size={20} /> : <Square size={20} />}
+                                </div>
+                                <div>
+                                  <div className={`font-bold leading-tight ${isSelected ? 'text-stone-800' : 'text-stone-500'}`}>
+                                    {item.name}
+                                    {isCustomItem && <span className="ml-1.5 text-xs bg-accent/10 text-accent px-1.5 py-0.5 rounded">custom</span>}
+                                  </div>
+                                  <div className="text-xs text-stone-400 mt-1 line-clamp-1">{item.description}</div>
+                                </div>
+                              </div>
+                              {isCustomItem && (
+                                <button
+                                  onClick={() => handleDeleteCustomItem(cat.id, item.id)}
+                                  className="text-stone-400 hover:text-red-600 transition-colors"
+                                  title="Delete custom item"
+                                >
+                                  <X size={16} />
+                                </button>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </>
                   )}
                 </div>
               );
