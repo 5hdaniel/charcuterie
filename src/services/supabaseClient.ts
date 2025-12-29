@@ -18,13 +18,23 @@ const getEnv = (key: string, viteKey: string) => {
 const supabaseUrl = getEnv('SUPABASE_URL', 'VITE_SUPABASE_URL');
 const supabaseKey = getEnv('SUPABASE_ANON_KEY', 'VITE_SUPABASE_ANON_KEY');
 
-if (!supabaseUrl || !supabaseKey) {
-  console.warn("Supabase credentials missing. Please check your .env file or Vercel Environment Variables.");
-  console.warn("The app will run with limited functionality. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY to enable full features.");
+// Check if Supabase is properly configured
+export const isSupabaseConfigured = () => {
+  return !!(supabaseUrl && supabaseKey &&
+    supabaseUrl !== 'your-project-url.supabase.co' &&
+    !supabaseUrl.includes('placeholder'));
+};
+
+if (!isSupabaseConfigured()) {
+  console.error("⚠️ Supabase credentials not configured!");
+  console.error("Please set the following environment variables in Vercel:");
+  console.error("  - VITE_SUPABASE_URL");
+  console.error("  - VITE_SUPABASE_ANON_KEY");
+  console.error("See VERCEL_DEPLOYMENT.md for setup instructions.");
 }
 
-// Use placeholder values if credentials are missing to prevent initialization errors
-// The app will still function but won't have database persistence
+// Only create client if properly configured, otherwise use dummy values
+// This prevents network errors when credentials are missing
 export const supabase = createClient(
   supabaseUrl || 'https://placeholder.supabase.co',
   supabaseKey || 'placeholder-anon-key'

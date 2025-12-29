@@ -38,14 +38,18 @@ const Landing = () => {
   const handleStart = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!hostName.trim()) return;
-    
+
     setIsLoading(true);
     try {
       const party = await createParty(hostName);
       navigate(`/party/${party.id}`);
-    } catch (e) {
+    } catch (e: any) {
       console.error(e);
-      alert("Error creating party. Please try again.");
+      if (e?.message === 'SUPABASE_NOT_CONFIGURED') {
+        alert("⚠️ Database Not Configured\n\nThe app cannot connect to the database because Supabase environment variables are not set.\n\nPlease configure VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in your Vercel project settings.\n\nSee the browser console for more details.");
+      } else {
+        alert("Error creating party. Please try again.");
+      }
     } finally {
       setIsLoading(false);
     }
@@ -157,9 +161,13 @@ const GuestPartyView = () => {
         const guest = await joinParty(partyId, guestName);
         setCurrentGuest(guest);
       }
-    } catch (err) {
+    } catch (err: any) {
       console.error(err);
-      alert("Could not join party. Please try again.");
+      if (err?.message === 'SUPABASE_NOT_CONFIGURED') {
+        alert("⚠️ Database Not Configured\n\nThe app cannot connect to the database because Supabase environment variables are not set.\n\nPlease contact the site administrator.");
+      } else {
+        alert("Could not join party. Please try again.");
+      }
     } finally {
       setJoining(false);
     }

@@ -1,7 +1,7 @@
 import { PartyState, Guest, EVENT_UPDATE } from '../types';
 import { BOARD_DATA } from '../constants';
 import { v4 as uuidv4 } from 'uuid';
-import { supabase } from './supabaseClient';
+import { supabase, isSupabaseConfigured } from './supabaseClient';
 
 // --- DRAFT SYSTEM (Kept Local) ---
 export const saveDraftVotes = (partyId: string, guestId: string, votes: Record<string, string[]>) => {
@@ -47,6 +47,10 @@ const mapDbToParty = (partyRow: any, guestRows: any[]): PartyState => {
 
 // Create a new party in Supabase
 export const createParty = async (hostName: string): Promise<PartyState> => {
+  if (!isSupabaseConfigured()) {
+    throw new Error('SUPABASE_NOT_CONFIGURED');
+  }
+
   const allItemIds = BOARD_DATA.flatMap(cat => cat.items.map(i => i.id));
   const newId = uuidv4();
 
@@ -77,6 +81,10 @@ export const createParty = async (hostName: string): Promise<PartyState> => {
 
 // Join an existing party
 export const joinParty = async (partyId: string, guestName: string): Promise<Guest> => {
+  if (!isSupabaseConfigured()) {
+    throw new Error('SUPABASE_NOT_CONFIGURED');
+  }
+
   const newGuestId = uuidv4();
 
   const { data, error } = await supabase
@@ -133,6 +141,13 @@ export const updatePartyCustomItems = async (partyId: string, customItems: Recor
 
 // Fetch and Subscribe (Realtime)
 export const subscribeToParty = (partyId: string, callback: () => void) => {
+  if (!isSupabaseConfigured()) {
+    // Return immediately with null party
+    currentPartyCache = null;
+    callback();
+    return () => {}; // Return empty cleanup function
+  }
+
   let subscription: any = null;
 
   const fetchInitial = async () => {
@@ -168,7 +183,7 @@ export const subscribeToParty = (partyId: string, callback: () => void) => {
     .channel(`party:${partyId}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'parties', filter: `id=eq.${partyId}` }, (payload) => {
       // Refresh full state on party update (simplified approach)
-      fetchInitial(); 
+      fetchInitial();
     })
     .on('postgres_changes', { event: '*', schema: 'public', table: 'guests', filter: `party_id=eq.${partyId}` }, (payload) => {
       fetchInitial();
